@@ -20,7 +20,15 @@ pipeline {
                 sh 'mkdir -p reports/sast reports/sca'
             }
         }
-
+        stage('1.5. Build & Clean (Maven)') {
+            steps {
+                echo 'Limpiando caché vieja y descargando librerías nuevas...'
+                // Usamos un contenedor de Maven temporal para compilar
+                sh '''
+                    docker run --rm -v "${WORKSPACE}:/usr/src/mymaven" -w /usr/src/mymaven maven:3.9-eclipse-temurin-17 mvn clean package -DskipTests
+                '''
+            }
+        }
         stage('2. SAST (Semgrep con Contenedor Efímero)') {
             steps {
                 echo 'Ejecutando análisis de código fuente (SAST)...'
