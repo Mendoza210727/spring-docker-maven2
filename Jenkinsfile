@@ -4,7 +4,7 @@ pipeline {
     environment {
         // --- VARIABLES GENERALES (Sin credenciales expuestas) ---
         DOJO_URL = "http://192.168.100.242:8080" 
-        PRODUCT_NAME = "Sistema de Control de Alquileres" 
+        PRODUCT_NAME = "spring-docker-maven2" 
         ENGAGEMENT_NAME = "V1 - Insegura" // Corregido a V1
         
         // Conexión al Docker de Windows
