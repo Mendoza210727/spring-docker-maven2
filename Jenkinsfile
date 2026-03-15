@@ -1,47 +1,73 @@
 pipeline {
     agent any
+
     environment {
-        //Define environment variables
-        STAGING_SERVER = 'root@spring-docker-demo'
-        ARTIFACT_NAME = 'demo-0.0.1-SNAPSHOT.jar'
+        // --- VARIABLES DE DEFECTDOJO ---
+        // Cambia la IP por la IP real de tu Ubuntu Server
+        DOJO_URL = "http://192.168.100.242:8080" 
+        
+        // Llamamos a la credencial que creaste (¡cero hardcodeo!)
+        DOJO_TOKEN = credentials('defectdojo-token') 
+        
+        // Estos nombres DEBEN ser exactamente iguales a como los creaste en DefectDojo
+        PRODUCT_NAME = "Sistema de Control de Alquileres" 
+        ENGAGEMENT_NAME = "V2 - Insegura"
     }
+
     stages {
-        stage('Clone Repository') {
+        stage('1. Checkout del Código') {
             steps {
-                git 'https://github.com/pablovillazon/spring-docker-maven2.git'
+                // Descarga el código de la rama configurada en el Job
+                checkout scm
             }
         }
-        stage('Build') {
+
+        stage('2. SAST (Semgrep)') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                echo 'Ejecutando análisis de código fuente (SAST)...'
+                // Usamos la imagen oficial de Semgrep. 
+                // El "|| true" evita que el pipeline se rompa si encuentra errores, para poder enviar el reporte.
+                sh '''
+                docker run --rm -v "${WORKSPACE}:/src" returntocorp/semgrep semgrep scan --config=p/ci --json -o /src/semgrep-report.json /src || true
+                '''
             }
         }
-        stage('Code Quality') {
+
+        stage('3. SCA (Trivy)') {
             steps {
-                sh 'mvn checkstyle:check'
+                echo 'Escaneando vulnerabilidades en dependencias...'
+                // Usamos Trivy para escanear el sistema de archivos del proyecto
+                sh '''
+                docker run --rm -v "${WORKSPACE}:/src" aquasec/trivy fs --format json --output /src/trivy-sca-report.json /src || true
+                '''
             }
         }
-        stage('Test') {
-            steps {
-                sh 'mvn test'
-            }
-        }
-        stage('Code Coverage') {
-            steps {
-                sh 'mvn jacoco:report'
-            }
-        }
-        stage('Deploy to Staging') {
-            steps {
-                sh 'scp target/${ARTIFACT_NAME} $STAGING_SERVER:/var/local/staging/'
-                sh 'ssh $STAGING_SERVER "nohup java -jar /var/local/staging/${ARTIFACT_NAME} > /dev/null 2>&1 &"'
-            }
-        }
-        stage('Validate Deployment') {
-            steps {
-                sh 'sleep 10'
-                sh 'curl --fail http://spring-docker-demo:8080/health'
-            }
+    }
+
+    // Esta sección siempre se ejecuta al final, pase lo que pase
+    post {
+        always {
+            echo 'Enviando reportes JSON a DefectDojo...'
+            
+            // Envío del reporte SAST (Semgrep)
+            sh '''
+                curl -X POST "${DOJO_URL}/api/v2/import-scan/" \
+                -H "Authorization: Token ${DOJO_TOKEN}" \
+                -F "scan_type=Semgrep JSON Report" \
+                -F "file=@semgrep-report.json" \
+                -F "product_name=${PRODUCT_NAME}" \
+                -F "engagement_name=${ENGAGEMENT_NAME}"
+            '''
+            
+            // Envío del reporte SCA (Trivy)
+            sh '''
+                curl -X POST "${DOJO_URL}/api/v2/import-scan/" \
+                -H "Authorization: Token ${DOJO_TOKEN}" \
+                -F "scan_type=Trivy Scan" \
+                -F "file=@trivy-sca-report.json" \
+                -F "product_name=${PRODUCT_NAME}" \
+                -F "engagement_name=${ENGAGEMENT_NAME}"
+            '''
         }
     }
 }
