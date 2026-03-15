@@ -12,6 +12,7 @@ pipeline {
         // Estos nombres DEBEN ser exactamente iguales a como los creaste en DefectDojo
         PRODUCT_NAME = "Sistema de Control de Alquileres" 
         ENGAGEMENT_NAME = "V2 - Insegura"
+        DOCKER_HOST = "tcp://host.docker.internal:2375"
     }
 
     stages {
