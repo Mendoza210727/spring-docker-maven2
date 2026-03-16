@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import org.springframework.boot.CommandLineRunner; // <--- Nuevo import
+import org.springframework.context.annotation.Bean; // <--- Nuevo imp
+
 
 /**
  * Main Spring Boot application class.
