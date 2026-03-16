@@ -91,7 +91,7 @@ pipeline {
                     docker volume create zap-temp-vol || true
                     
                     # 🚨 CAMBIO CLAVE: ZAP atacará directamente el endpoint /buscar
-                    docker run --name zap-scan -u root -v zap-temp-vol:/zap/wrk -t ghcr.io/zaproxy/zaproxy:stable zap-full-scan.py -t "http://192.168.100.242:8081/buscar?nombre=admin" -m 1 -J zap-report.json || true
+                    docker run --name zap-scan -u root -v zap-temp-vol:/zap/wrk -t ghcr.io/zaproxy/zaproxy:stable zap-full-scan.py -t "http://192.168.100.242:8081/buscar" -m 1 -J zap-report.json || true
                     
                     docker cp zap-scan:/zap/wrk/zap-report.json reports/dast/zap-report.json || true
                     docker rm -f zap-scan || true
