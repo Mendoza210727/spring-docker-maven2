@@ -74,10 +74,10 @@ pipeline {
                 sshagent(['ubuntu-server-ssh']) {
                     sh '''
                         # Enviar el JAR a la carpeta segura
-                        scp -o StrictHostKeyChecking=no target/*.jar user@192.168.100.242:~/deploy/seguro/app.jar
+                        scp -o StrictHostKeyChecking=no target/*.jar mendoza@192.168.100.242:~/deploy/seguro/app.jar
                         
                         # Matar el proceso anterior en el puerto 8082 y arrancar el nuevo
-                        ssh -o StrictHostKeyChecking=no user@192.168.100.242 "
+                        ssh -o StrictHostKeyChecking=no mendoza@192.168.100.242 "
                             fuser -k 8082/tcp || true
                             nohup java -jar ~/deploy/seguro/app.jar --server.port=8082 > ~/deploy/seguro/log.txt 2>&1 &
                         "
