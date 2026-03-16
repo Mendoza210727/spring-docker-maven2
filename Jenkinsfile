@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         // --- VARIABLES GENERALES ---
-        DOJO_URL = "http://192.168.100.242:8080" 
+        DOJO_URL = "http://192.168.0.18:8080" 
         PRODUCT_NAME = "spring-docker-maven2" 
         ENGAGEMENT_NAME = "V1 - Insegura"
         DOCKER_HOST = "tcp://host.docker.internal:2375"
@@ -71,10 +71,10 @@ pipeline {
                 sshagent(['mendoza-server-ssh']) {
                     sh '''
                         # Enviamos el JAR al servidor
-                        scp -o StrictHostKeyChecking=no target/*.jar mendoza@192.168.100.242:~/deploy/inseguro/app.jar
+                        scp -o StrictHostKeyChecking=no target/*.jar mendoza@192.168.0.18:~/deploy/inseguro/app.jar
                         
                         # Matamos la app vieja y arrancamos la nueva en segundo plano
-                        ssh -o StrictHostKeyChecking=no mendoza@192.168.100.242 "
+                        ssh -o StrictHostKeyChecking=no mendoza@192.168.0.18 "
                             fuser -k 8081/tcp || true
                             nohup java -jar ~/deploy/inseguro/app.jar --server.port=8081 > ~/deploy/inseguro/log.txt 2>&1 &
                             sleep 15 # Damos 15 segundos para que la app termine de arrancar antes de atacarla
@@ -91,7 +91,7 @@ pipeline {
                     docker volume create zap-temp-vol || true
                     
                     # 🚨 CAMBIO VITAL: Usamos -x zap-report.xml en lugar de -J
-                    docker run --name zap-scan -u root -v zap-temp-vol:/zap/wrk -t ghcr.io/zaproxy/zaproxy:stable zap-full-scan.py -t "http://192.168.100.242:8081/buscar?nombre=admin" -m 1 -x zap-report.xml || true
+                    docker run --name zap-scan -u root -v zap-temp-vol:/zap/wrk -t ghcr.io/zaproxy/zaproxy:stable zap-full-scan.py -t "http://192.168.0.18:8081/buscar?nombre=admin" -m 1 -x zap-report.xml || true
                     
                     # Extraemos el archivo .xml
                     docker cp zap-scan:/zap/wrk/zap-report.xml reports/dast/zap-report.xml || true
