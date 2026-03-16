@@ -86,9 +86,8 @@ pipeline {
                     # 1. Creamos un volumen temporal de Docker
                     docker volume create zap-temp-vol || true
                     
-                    # 2. Corremos ZAP mapeando el volumen (-v) para que guarde el reporte
-                    # (Si estás usando Nginx usa /segura/, si no, usa :8082)
-                    docker run --name zap-scan -v zap-temp-vol:/zap/wrk -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://192.168.100.242/segura/ -J zap-report.json || true
+                    # 2. Corremos ZAP como ROOT (-u root) mapeando el volumen (-v) 
+                    docker run --name zap-scan -u root -v zap-temp-vol:/zap/wrk -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://192.168.100.242/segura/ -J zap-report.json || true
                     
                     # 3. Extraemos el reporte desde el volumen hacia Jenkins
                     docker cp zap-scan:/zap/wrk/zap-report.json reports/dast/zap-report.json || true
