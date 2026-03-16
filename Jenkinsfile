@@ -84,16 +84,16 @@ pipeline {
 
         stage('5. DAST (ZAP)') {
             steps {
-                echo 'Iniciando ataque dinámico pasivo con OWASP ZAP (Baseline)...'
+                echo 'Iniciando ataque dinámico con OWASP ZAP...'
                 sh '''
                     # 1. Creamos un volumen temporal de Docker
                     docker volume create zap-temp-vol || true
                     
-                    # 2. CAMBIO A XML (-x zap-report.xml)
-                    docker run --name zap-scan -u root -v zap-temp-vol:/zap/wrk -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://192.168.0.18/segura/ -x zap-report.xml || true
+                    # 2. Corremos ZAP como ROOT (-u root) mapeando el volumen (-v) 
+                    docker run --name zap-scan -u root -v zap-temp-vol:/zap/wrk -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://192.168.0./segura/ -J zap-report.json || true
                     
-                    # 3. Extraemos el reporte en formato XML
-                    docker cp zap-scan:/zap/wrk/zap-report.xml reports/dast/zap-report.xml || true
+                    # 3. Extraemos el reporte desde el volumen hacia Jenkins
+                    docker cp zap-scan:/zap/wrk/zap-report.json reports/dast/zap-report.json || true
                     
                     # 4. Limpiamos la basura
                     docker rm -f zap-scan || true
@@ -131,17 +131,14 @@ pipeline {
 
                 // 3. ¡NUEVO! Envío DAST (ZAP)
                 sh '''
-                    # Verificamos que el reporte XML exista antes de enviarlo
-                    if [ -f "reports/dast/zap-report.xml" ]; then
-                        echo " Reporte ZAP XML encontrado. Enviando al Dojo..."
+                    # Verificamos que el reporte exista antes de enviarlo
+                    if [ -f "reports/dast/zap-report.json" ]; then
                         curl -s -X POST "${DOJO_URL}/api/v2/import-scan/" \
                         -H "Authorization: Token ${DD_TOKEN}" \
                         -F "scan_type=ZAP Scan" \
-                        -F "file=@reports/dast/zap-report.xml" \
+                        -F "file=@reports/dast/zap-report.json" \
                         -F "product_name=${PRODUCT_NAME}" \
                         -F "engagement_name=${ENGAGEMENT_NAME}" > /dev/null
-                    else
-                        echo "⚠️ Reporte ZAP XML no encontrado."
                     fi
                 '''
             }
