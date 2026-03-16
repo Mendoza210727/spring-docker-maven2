@@ -8,15 +8,18 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Main Spring Boot application class.
  * <p>
- * This class serves as the entry point for the Spring Boot application and exposes
+ * This class serves as the entry point for the Spring Boot application and
+ * exposes
  * a simple health check endpoint at <code>/health</code>.
  * </p>
  * 
  * <p>
  * Annotations:
  * <ul>
- *   <li>{@link org.springframework.boot.autoconfigure.SpringBootApplication} - Indicates a Spring Boot application.</li>
- *   <li>{@link org.springframework.web.bind.annotation.RestController} - Marks this class as a REST controller.</li>
+ * <li>{@link org.springframework.boot.autoconfigure.SpringBootApplication} -
+ * Indicates a Spring Boot application.</li>
+ * <li>{@link org.springframework.web.bind.annotation.RestController} - Marks
+ * this class as a REST controller.</li>
  * </ul>
  * </p>
  * 
@@ -33,6 +36,11 @@ public class DemoApplication {
      */
     public static void main(final String[] args) {
         SpringApplication.run(DemoApplication.class, args);
+    }
+
+    @GetMapping("/")
+    public String welcome() {
+        return "¡Bienvenido a la API Demo! 🚀";
     }
 
     @GetMapping("/health")

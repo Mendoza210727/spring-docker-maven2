@@ -83,17 +83,19 @@ pipeline {
             steps {
                 echo 'Iniciando ataque dinámico con OWASP ZAP...'
                 sh '''
-                    # Creamos el contenedor de ZAP
-                    # Usamos la IP de tu servidor y la ruta /segura/ que configuraste en Nginx
-                    # (Si no configuraste Nginx, cambia el puerto a 8082: http://192.168.100.242:8082)
-                    docker create --name zap-scan -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://192.168.100.242/segura/ -J zap-report.json
+                    # 1. Creamos un volumen temporal de Docker
+                    docker volume create zap-temp-vol || true
                     
-                    # Ejecutamos el ataque
-                    docker start -a zap-scan || true
+                    # 2. Corremos ZAP mapeando el volumen (-v) para que guarde el reporte
+                    # (Si estás usando Nginx usa /segura/, si no, usa :8082)
+                    docker run --name zap-scan -v zap-temp-vol:/zap/wrk -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://192.168.100.242/segura/ -J zap-report.json || true
                     
-                    # Rescatamos el reporte ANTES de destruir el contenedor
+                    # 3. Extraemos el reporte desde el volumen hacia Jenkins
                     docker cp zap-scan:/zap/wrk/zap-report.json reports/dast/zap-report.json || true
-                    docker rm zap-scan
+                    
+                    # 4. Limpiamos la basura
+                    docker rm -f zap-scan || true
+                    docker volume rm zap-temp-vol || true
                 '''
             }
         }
