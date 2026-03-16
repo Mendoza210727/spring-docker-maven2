@@ -66,10 +66,10 @@ pipeline {
                 sshagent(['ubuntu-server-ssh']) {
                     sh '''
                         # Enviamos el JAR al servidor
-                        scp -o StrictHostKeyChecking=no target/*.jar mendoza@192.168.100.242:~/deploy/seguro/app.jar
+                        scp -o StrictHostKeyChecking=no target/*.jar root@192.168.100.242:~/deploy/seguro/app.jar
                         
                         # Matamos la app vieja y arrancamos la nueva en segundo plano
-                        ssh -o StrictHostKeyChecking=no mendoza@192.168.100.242 "
+                        ssh -o StrictHostKeyChecking=no root@192.168.100.242 "
                             fuser -k 8082/tcp || true
                             nohup java -jar ~/deploy/seguro/app.jar --server.port=8082 > ~/deploy/seguro/log.txt 2>&1 &
                             sleep 15 # Damos 15 segundos para que la app termine de arrancar antes de atacarla
@@ -101,7 +101,7 @@ pipeline {
 
     post {
         always {
-            echo '📤 Enviando TODOS los reportes JSON a DefectDojo...'
+            echo ' Enviando TODOS los reportes JSON a DefectDojo...'
             
             withCredentials([string(credentialsId: 'defectdojo-token', variable: 'DD_TOKEN')]) {
                 
