@@ -20,19 +20,21 @@ pipeline {
 
         stage('1.5. Build & Clean (Maven)') {
             steps {
-                echo 'Limpiando caché vieja y compilando proyecto...'
+                echo 'Limpiando contenedores viejos y compilando proyecto...'
                 sh '''
-                    # Construimos el proyecto en el contenedor
+                    # 🧹 EL TRUCO: Borramos cualquier contenedor maven-build previo si existe
+                    docker rm -f maven-build || true
+                    
+                    # Ahora sí, creamos el nuevo sin conflictos
                     docker create --name maven-build -w /src maven:3.9-eclipse-temurin-17 mvn clean package -DskipTests
                     docker cp . maven-build:/src
                     docker start -a maven-build
                     
-                    # 🧹 EL TRUCO: Borramos el target viejo y corrupto de Jenkins
+                    # Limpiamos el target local de Jenkins antes de copiar el nuevo
                     rm -rf ./target
                     
-                    # Extraemos el target nuevo y perfecto
                     docker cp maven-build:/src/target ./target || true
-                    docker rm maven-build
+                    docker rm -f maven-build
                 '''
             }
         }
