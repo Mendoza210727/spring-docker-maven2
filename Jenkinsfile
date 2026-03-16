@@ -69,33 +69,29 @@ pipeline {
                 '''
             }
         }
-        stage('4. Despliegue en Ubuntu Server') {
-    steps {
-        // Usamos las credenciales SSH que configuraste en Jenkins
-        sshagent(['ubuntu-server-ssh']) {
-            sh '''
-                # 1. Copiamos el JAR recién compilado al servidor
-                scp -o StrictHostKeyChecking=no target/*.jar user@192.168.100.242:/home/user/app.jar
-
-                # 2. Le ordenamos al servidor que reinicie el contenedor
-                # Si es la rama Segura usa puerto 8082, si es Insegura usa 8081
-                ssh -o StrictHostKeyChecking=no user@192.168.100.242 "
-                    docker stop app-segura || true && docker rm app-segura || true
-                    docker run -d --name app-segura -p 8082:8080 openjdk:17-jdk-slim java -jar /home/user/app.jar
-                "
-            '''
+        stage('4. Despliegue SEGURO') {
+            steps {
+                sshagent(['ubuntu-server-ssh']) {
+                    sh '''
+                        # Enviar el JAR a la carpeta segura
+                        scp -o StrictHostKeyChecking=no target/*.jar user@192.168.100.242:~/deploy/seguro/app.jar
+                        
+                        # Matar el proceso anterior en el puerto 8082 y arrancar el nuevo
+                        ssh -o StrictHostKeyChecking=no user@192.168.100.242 "
+                            fuser -k 8082/tcp || true
+                            nohup java -jar ~/deploy/seguro/app.jar --server.port=8082 > ~/deploy/seguro/log.txt 2>&1 &
+                        "
+                    '''
+                }
+            }
         }
-    }
-}
-stage('5. DAST (OWASP ZAP)') {
-    steps {
-        sh '''
-            docker run --rm -v $(pwd)/reports/dast:/zap/wrk/:rw \
-            -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-            -t http://192.168.100.242/segura/ -J zap-report.json || true
-        '''
-    }
-}
+        stage('5. DAST (ZAP)') {
+            steps {
+                // ZAP ataca al puerto 8082 o via Nginx /segura/
+                sh 'docker run --rm -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://192.168.100.242/segura/ -J report.json || true'
+            }
+        }
+        
         
     }
 
