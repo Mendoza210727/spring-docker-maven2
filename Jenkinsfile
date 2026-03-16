@@ -86,14 +86,16 @@ pipeline {
 
         stage('5. DAST (ZAP)') {
             steps {
-                echo 'Lanzando ataque directo al endpoint vulnerable...'
+                echo 'Lanzando ataque activo y generando reporte XML...'
                 sh '''
                     docker volume create zap-temp-vol || true
                     
-                    # 🚨 CAMBIO CLAVE: ZAP atacará directamente el endpoint /buscar
-                    docker run --name zap-scan -u root -v zap-temp-vol:/zap/wrk -t ghcr.io/zaproxy/zaproxy:stable zap-full-scan.py -t "http://192.168.100.242:8081/buscar" -m 1 -J zap-report.json || true
+                    # 🚨 CAMBIO VITAL: Usamos -x zap-report.xml en lugar de -J
+                    docker run --name zap-scan -u root -v zap-temp-vol:/zap/wrk -t ghcr.io/zaproxy/zaproxy:stable zap-full-scan.py -t "http://192.168.100.242:8081/buscar?nombre=admin" -m 1 -x zap-report.xml || true
                     
-                    docker cp zap-scan:/zap/wrk/zap-report.json reports/dast/zap-report.json || true
+                    # Extraemos el archivo .xml
+                    docker cp zap-scan:/zap/wrk/zap-report.xml reports/dast/zap-report.xml || true
+                    
                     docker rm -f zap-scan || true
                     docker volume rm zap-temp-vol || true
                 '''
