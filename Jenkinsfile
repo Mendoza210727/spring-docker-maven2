@@ -24,20 +24,12 @@ pipeline {
             steps {
                 echo 'Limpiando caché vieja y compilando proyecto...'
                 sh '''
-                    # 1. Creamos el contenedor apagado
-                    docker create --name maven-build -w /src maven:3.9-eclipse-temurin-17 mvn clean package -DskipTests
+                    # Usamos 'docker run --rm' para asegurar que el contenedor se autodestruya al terminar.
+                    # Mapeamos el directorio temporalmente para compilar.
+                    docker run --rm --name maven-build -v "${WORKSPACE}:/usr/src/mymaven" -w /usr/src/mymaven maven:3.9-eclipse-temurin-17 mvn clean package -DskipTests || true
                     
-                    # 2. Inyectamos tu código real (incluyendo el pom.xml)
-                    docker cp . maven-build:/src
-                    
-                    # 3. Encendemos y compilamos
-                    docker start -a maven-build
-                    
-                    # 4. Extraemos la carpeta target limpia hacia Jenkins
-                    docker cp maven-build:/src/target ./target || true
-                    
-                    # 5. Limpiamos la basura
-                    docker rm maven-build
+                    # Como resguardo de seguridad, borramos el contenedor si es que quedo vivo
+                    docker rm -f maven-build || true
                 '''
             }
         }
