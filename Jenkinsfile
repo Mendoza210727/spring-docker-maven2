@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         // --- VARIABLES GENERALES ---
-        DOJO_URL = "http://192.168.100.242:8080" 
+        DOJO_URL = "http://192.168.0.18:8080" 
         PRODUCT_NAME = "spring-docker-maven2" 
         ENGAGEMENT_NAME = "V2 - Segura"
         DOCKER_HOST = "tcp://host.docker.internal:2375"
@@ -69,10 +69,10 @@ pipeline {
                 sshagent(['mendoza-server-ssh']) {
                     sh '''
                         # Enviamos el JAR al servidor
-                        scp -o StrictHostKeyChecking=no target/*.jar mendoza@192.168.100.242:~/deploy/seguro/app.jar
+                        scp -o StrictHostKeyChecking=no target/*.jar mendoza@192.168.0.18:~/deploy/seguro/app.jar
                         
                         # Matamos la app vieja y arrancamos la nueva en segundo plano
-                        ssh -o StrictHostKeyChecking=no mendoza@192.168.100.242 "
+                        ssh -o StrictHostKeyChecking=no mendoza@192.168.0.18 "
                             fuser -k 8082/tcp || true
                             nohup java -jar ~/deploy/seguro/app.jar --server.port=8082 > ~/deploy/seguro/log.txt 2>&1 &
                             sleep 15 # Damos 15 segundos para que la app termine de arrancar antes de atacarla
@@ -84,16 +84,16 @@ pipeline {
 
         stage('5. DAST (ZAP)') {
             steps {
-                echo 'Iniciando ataque dinámico con OWASP ZAP...'
+                echo 'Iniciando ataque dinámico pasivo con OWASP ZAP (Baseline)...'
                 sh '''
                     # 1. Creamos un volumen temporal de Docker
                     docker volume create zap-temp-vol || true
                     
-                    # 2. Corremos ZAP como ROOT (-u root) mapeando el volumen (-v) 
-                    docker run --name zap-scan -u root -v zap-temp-vol:/zap/wrk -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://192.168.100.242/segura/ -J zap-report.json || true
+                    # 2. CAMBIO A XML (-x zap-report.xml)
+                    docker run --name zap-scan -u root -v zap-temp-vol:/zap/wrk -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://192.168.0.18/segura/ -x zap-report.xml || true
                     
-                    # 3. Extraemos el reporte desde el volumen hacia Jenkins
-                    docker cp zap-scan:/zap/wrk/zap-report.json reports/dast/zap-report.json || true
+                    # 3. Extraemos el reporte en formato XML
+                    docker cp zap-scan:/zap/wrk/zap-report.xml reports/dast/zap-report.xml || true
                     
                     # 4. Limpiamos la basura
                     docker rm -f zap-scan || true
@@ -131,14 +131,17 @@ pipeline {
 
                 // 3. ¡NUEVO! Envío DAST (ZAP)
                 sh '''
-                    # Verificamos que el reporte exista antes de enviarlo
-                    if [ -f "reports/dast/zap-report.json" ]; then
+                    # Verificamos que el reporte XML exista antes de enviarlo
+                    if [ -f "reports/dast/zap-report.xml" ]; then
+                        echo " Reporte ZAP XML encontrado. Enviando al Dojo..."
                         curl -s -X POST "${DOJO_URL}/api/v2/import-scan/" \
                         -H "Authorization: Token ${DD_TOKEN}" \
                         -F "scan_type=ZAP Scan" \
-                        -F "file=@reports/dast/zap-report.json" \
+                        -F "file=@reports/dast/zap-report.xml" \
                         -F "product_name=${PRODUCT_NAME}" \
                         -F "engagement_name=${ENGAGEMENT_NAME}" > /dev/null
+                    else
+                        echo "⚠️ Reporte ZAP XML no encontrado."
                     fi
                 '''
             }
