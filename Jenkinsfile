@@ -22,7 +22,7 @@ pipeline {
             steps {
                 echo 'Limpiando contenedores viejos y compilando proyecto...'
                 sh '''
-                    # 🧹 EL TRUCO: Borramos cualquier contenedor maven-build previo si existe
+                    #Borramos cualquier contenedor maven-build previo si existe
                     docker rm -f maven-build || true
                     
                     # Ahora sí, creamos el nuevo sin conflictos
@@ -86,18 +86,20 @@ pipeline {
 
         stage('5. DAST (ZAP)') {
             steps {
-                echo 'Iniciando ataque dinámico con OWASP ZAP...'
+                echo 'Lanzando ataque activo (Full Scan) para detectar Inyección SQL...'
                 sh '''
-                    # 1. Creamos un volumen temporal de Docker
+                    # 1. Limpiamos y creamos volumen
                     docker volume create zap-temp-vol || true
                     
-                    # 2. Corremos ZAP como ROOT (-u root) mapeando el volumen (-v) 
-                    docker run --name zap-scan -u root -v zap-temp-vol:/zap/wrk -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://192.168.100.242/insegura/ -J zap-report.json || true
+                    # 2. EL CAMBIO CLAVE: Cambiamos a FULL-SCAN y apuntamos al puerto 8081
+                    # zap-full-scan.py: Envía ataques reales (SQLi, XSS, etc.)
+                    # -m 1: Escaneo rápido de 1 minuto (ideal para demos)
+                    docker run --name zap-scan -u root -v zap-temp-vol:/zap/wrk -t ghcr.io/zaproxy/zaproxy:stable zap-full-scan.py -t http://192.168.100.242:8081 -m 1 -J zap-report.json || true
                     
-                    # 3. Extraemos el reporte desde el volumen hacia Jenkins
+                    # 3. Extraemos el reporte (ahora sí vendrá con la SQLi)
                     docker cp zap-scan:/zap/wrk/zap-report.json reports/dast/zap-report.json || true
                     
-                    # 4. Limpiamos la basura
+                    # 4. Limpieza
                     docker rm -f zap-scan || true
                     docker volume rm zap-temp-vol || true
                 '''
