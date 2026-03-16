@@ -37,7 +37,7 @@ pipeline {
             }
         }
 
-        /* stage('2. SAST (Semgrep)') {
+        stage('2. SAST (Semgrep)') {
             steps {
                 echo 'Ejecutando análisis de código fuente (SAST)...'
                 sh '''
@@ -48,9 +48,9 @@ pipeline {
                     docker rm semgrep-scan
                 '''
             }
-        } */
+        }
 
-       /*  stage('3. SCA (Trivy)') {
+        stage('3. SCA (Trivy)') {
             steps {
                 echo 'Escaneando vulnerabilidades en dependencias...'
                 sh '''
@@ -61,7 +61,7 @@ pipeline {
                     docker rm trivy-scan
                 '''
             }
-        } */
+        }
 
         stage('4. Despliegue SEGURO') {
             steps {
