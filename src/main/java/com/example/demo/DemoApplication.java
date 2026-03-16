@@ -69,4 +69,8 @@ public class DemoApplication {
         String query = "SELECT * FROM usuarios WHERE nombre = '" + nombre + "'";
         return jdbcTemplate.queryForList(query);
     }
+     @GetMapping("/")
+    public String welcome() {
+        return "¡Bienvenido a la API Demo Insegura! 🚀";
+    }
 }
