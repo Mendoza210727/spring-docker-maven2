@@ -130,15 +130,19 @@ pipeline {
                 '''
 
                 // 3. ¡NUEVO! Envío DAST (ZAP)
+                // 3. Envío DAST (ZAP)
                 sh '''
-                    # Verificamos que el reporte exista antes de enviarlo
-                    if [ -f "reports/dast/zap-report.json" ]; then
+                    # Ahora buscamos y enviamos el archivo .xml
+                    if [ -f "reports/dast/zap-report.xml" ]; then
+                        echo "✅ Reporte ZAP XML encontrado. Enviando a DefectDojo..."
                         curl -s -X POST "${DOJO_URL}/api/v2/import-scan/" \
                         -H "Authorization: Token ${DD_TOKEN}" \
                         -F "scan_type=ZAP Scan" \
-                        -F "file=@reports/dast/zap-report.json" \
+                        -F "file=@reports/dast/zap-report.xml" \
                         -F "product_name=${PRODUCT_NAME}" \
                         -F "engagement_name=${ENGAGEMENT_NAME}" > /dev/null
+                    else
+                        echo "⚠️ Reporte ZAP XML no encontrado."
                     fi
                 '''
             }
